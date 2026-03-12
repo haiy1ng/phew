@@ -39,11 +39,9 @@ Priorities below are informed by the research synthesis in [docs/xiaohongshu-red
 | AI "After" Preview | Generates a realistic image of the same space, but clean and organized. | P0 | In MVP |
 | Micro-Task Engine | AI analyzes the "Before" photo and generates 5-7 tiny default tasks, expandable up to 10 for dense scenes. | P0 | In MVP |
 | First Visible Win Sequencing | Engine selects a very short, visually meaningful first task to reduce paralysis. | P0 | In MVP |
-| Recommended Next Step UI | Default task surface shows `Now / Next / Later` instead of the full list. | P0 | In MVP |
+| Recommended Next Step UI | Default task surface shows one recommended next step; the rest of the checklist stays collapsed until needed. | P0 | In MVP |
 | Interactive Checklist + Haptics | Simple checklist UI to mark tasks done, with haptic feedback for fast reinforcement. | P0 | In MVP |
 | Progress Persistence | Saves session so users can step away and return without losing progress. | P1 | In MVP |
-| Rescue Task / Split Task | If the user stalls, offer a smaller fallback task or split the current task into easier pieces. | P1 | Stretch MVP |
-| Focus Sprint Timer | Optional 2-5 minute timer attached to current task to reduce start friction. | P1 | Stretch MVP |
 | Post-Session Maintenance Nudge | After cleanup, suggest one tiny upkeep action to reduce relapse. | P1 | Stretch MVP |
 | Audio Companion Launch | Let user start cleaning with music or podcasts to reduce aversiveness. | P2 | Out of MVP |
 | Maintenance Mode | Separate mode for daily/weekly reset sessions after the initial cleanup. | P2 | Out of MVP |
@@ -58,6 +56,8 @@ Priorities below are informed by the research synthesis in [docs/xiaohongshu-red
 
 ## 7) Non-Goals (MVP)
 - Deep music or podcast integrations.
+- Visible countdown timers or urgency mechanics.
+- Rescue-task interruptions during active cleaning.
 - Social features or accountability groups.
 - Organizer or product recommendations during the initial cleanup flow.
 - Multi-room project planning across an entire home.
@@ -74,7 +74,7 @@ Priorities below are informed by the research synthesis in [docs/xiaohongshu-red
    - 5-7 ordered micro-tasks by default.
    - one recommended first-visible-win starter task.
 5. User starts cleaning from the recommended starter task and checks tasks one by one.
-6. Haptic feedback, progress bar, and completion count update instantly; the app may attach an optional timer and later offer a rescue task if the user stalls.
+6. Haptic feedback, progress bar, and completion count update instantly.
 7. User leaves app and returns later; session state is restored.
 8. User finishes and gets completion state, with an optional maintenance handoff.
 
@@ -99,7 +99,7 @@ Acceptance criteria:
 - Default task size should be short (target around 2 minutes each).
 - Steps must be practical and non-overlapping.
 - First task should be short (`<= 90` seconds), concrete, and visually impactful.
-- Default UI queue should reduce choice overload by showing one recommended task plus at most two upcoming tasks.
+- Default UI should reduce choice overload by showing one recommended task first and keeping the rest of the checklist collapsed.
 
 Acceptance criteria:
 - Task list is understandable at a glance and immediately actionable.
@@ -119,14 +119,6 @@ Acceptance criteria:
 
 Acceptance criteria:
 - User can leave app for hours and return without losing checklist state.
-
-### FR-6 Momentum Recovery (P1)
-- Detect likely stall during an active session.
-- Offer either a rescue micro-task or a split-task version of the current task.
-- Keep recovery language supportive and non-judgmental.
-
-Acceptance criteria:
-- A stalled session can recover without the user needing to regenerate the full plan.
 
 ## 10) Functional Requirements (Technical)
 ### AI Image Generation
@@ -224,7 +216,6 @@ Entity: `CleanupTask`
 - `POST /v1/cleanup/sessions`: create session with uploaded image, return `sessionId` and processing status.
 - `GET /v1/cleanup/sessions/{id}`: fetch processing state or full generated session payload.
 - `PATCH /v1/cleanup/sessions/{id}/tasks/{taskId}`: update `isDone` and persist progress.
-- `POST /v1/cleanup/sessions/{id}/rescue-task`: generate one smaller fallback task when user stalls.
 - `GET /v1/cleanup/sessions/active`: restore latest in-progress session for app relaunch.
 
 ### Backend Processing Flow (MVP)
@@ -244,8 +235,7 @@ Entity: `CleanupTask`
 ### Runtime Rules
 - If after-image generation fails, still return task session with partial-success state.
 - Persist progress after every task toggle.
-- Trigger rescue-task suggestion when no completion event is recorded for >= 180 seconds.
-- Log core metrics: `time_to_first_checkoff`, `session_completion_rate`, `stall_events`, `resume_rate`.
+- Log core metrics: `time_to_first_checkoff`, `session_completion_rate`, `resume_rate`.
 
 ## 14) UX Principles
 - **Start instantly**: minimal input burden on first screen.

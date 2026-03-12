@@ -11,245 +11,197 @@ Design a micro-task system that reliably helps users:
 | Evidence insight | What it means for Phew |
 |---|---|
 | Procrastination is strongly associated with **task aversiveness**, **delay**, **low self-efficacy**, and **impulsiveness** (Steel, 2007). | Task generator should minimize aversiveness and delay-to-reward, and maximize confidence with very small starter tasks. |
-| **Implementation intentions** (if-then planning) have a medium-to-large effect on goal attainment (d = 0.65) across 94 tests (Gollwitzer & Sheeran, 2006). | Every task should include an if-then action cue (for example: "If timer starts, then collect visible trash for 2 minutes."). |
+| **Implementation intentions** (if-then planning) have a medium-to-large effect on goal attainment (d = 0.65) across 94 tests (Gollwitzer & Sheeran, 2006). | Every task should include an if-then action cue (for example: "When I start, I will clear visible trash from the desk."). |
 | Prompting users to **monitor progress** improves attainment (d+ = 0.40); effects are larger when progress is physically recorded (Harkin et al., 2016). | Checklist interaction must be central, not secondary. Each completed step is recorded and visibly updates progress. |
 | Goal-setting research supports clear goals and mechanism-level moderators (Locke & Latham, 2002). | Tasks must be specific and operational, not vague (object + location + duration). |
-| Too many options can reduce action (Iyengar & Lepper, 2000; 6 choices outperformed 24/30 in classic studies). | Limit concurrent options: show one recommended next task and at most two alternates. |
+| Too many options can reduce action (Iyengar & Lepper, 2000; 6 choices outperformed 24/30 in classic studies). | Limit concurrent options: show one recommended next task first and keep the rest collapsed until needed. |
 | Reinforcement contingencies improve performance and motivation in ADHD samples; immediate rewards matter (Luman et al., 2005; Luman et al., 2010). | Keep reward latency very low (instant haptic + visual acknowledgment on check-off). |
 | Endowed progress increases persistence and completion speed (Nunes & Drèze, 2006). | Start sessions with legitimate initial progress (for example, "Plan created" counted as completed setup milestone). |
 | Habit formation is variable (18-254 days to asymptote), and missing once does not materially break formation (Lally et al., 2010). | Use forgiving recovery UX; avoid punitive streak resets for missed sessions. |
 
-## 3) Research-Driven Improvements
+## 3) Research-Driven Design Constraints
 
-The qualitative research adds a few product constraints that are stronger than the literature-only version:
-- Start friction matters more than total plan completeness.
-- The first visible win is disproportionately important.
-- Users want less thinking, not just less work.
-- Audio can reduce aversiveness and help activation, but it is a support layer rather than the core intervention.
-- Maintenance matters because users experience cleaning as a cycle, not a one-time project.
-- Tool and organizer recommendations should be delayed until clutter volume is reduced, to avoid the "tool trap."
+The qualitative research sharpens the product constraints:
+- Start friction matters more than plan completeness.
+- The first visible win matters more than fine-grained optimization across all later tasks.
+- Users want less thinking, not more intervention.
+- The frontend should feel calm:
+  - no visible countdown timer,
+  - no rescue-task interruptions,
+  - no urgency mechanics.
+- Maintenance matters, but it should be a light handoff rather than a heavy second system.
+- Tool and organizer recommendations should come later, after clutter volume is reduced.
 
 ## 4) MVP Engine
 
-The MVP engine should optimize for one outcome above all others: fast transition from paralysis to first checkoff.
+The MVP engine should answer one question well: "What is the best first thing to do next?"
 
-### 4.1 MVP product behavior
+### 4.1 MVP behavior
 - Generate `5-7` tasks by default; allow up to `10` only for very dense scenes.
-- Select one task as the clear recommended starter.
-- Keep the starter task short and visually rewarding:
-  - `estimated_seconds <= 90`
-  - `visible_impact_score >= 0.7`
-  - `decision_load_score <= 0.4`
-- Show only `Now / Next / Later` by default, with at most 3 visible cards.
-- Attach an activation bundle to the starter task:
-  - if-then action cue,
-  - suggested timer length,
-  - optional activation aid marker for future extensions.
-- If the user stalls, offer either:
-  - a rescue micro-task (`30-60` seconds), or
-  - a split-task version of the current task.
-- End the session with one lightweight maintenance action so the app bridges from cleanup to upkeep.
+- Surface one recommended next task by default; keep the rest collapsed until needed.
+- Keep tasks concrete, short, and low-drama:
+  - target `60-180` seconds internally,
+  - no visible timer on the frontend,
+  - no rescue-task surfaces.
+- End the plan with a light maintenance handoff when appropriate.
 
-### 4.2 MVP data contracts
+### 4.2 Minimal concepts
+
+The engine should use only three core concepts:
+- `phase`: where the task belongs in the cleanup order.
+- `impact`: how much immediate visible/useful improvement the task creates.
+- `effort`: how hard the task will feel to start and finish.
+
+Anything else should either map into one of those or be removed.
+
+### 4.3 What comes from the initial LLM call
+
+The initial multimodal call should return structured task drafts, not final ranking.
 
 ```ts
-export type SceneObject = {
-  id: string;
-  label: "trash" | "dish" | "laundry" | "paper" | "cable" | "misc";
-  zoneId: string;
-  confidence: number; // 0..1
-  estimatedCount: number;
-};
-
-export type Zone = {
-  id: string;
-  label: string; // e.g., desk-surface, floor-left
-  clutterScore: number; // 0..1
-  accessibilityScore: number; // 0..1
-  visibleImpactPotential: number; // 0..1
-};
-
-export type TaskCandidate = {
+export type TaskDraft = {
   id: string;
   title: string;
   instruction: string;
+  taskKind: "trash" | "gather" | "group" | "reset" | "clean" | "finish";
   zoneId: string;
-  objectTargets: string[];
   estimatedSeconds: number;
-  dependencyIds: string[];
-  visibleImpactScore: number; // 0..1
-  aversivenessScore: number; // 0..1
-  complexityScore: number; // 0..1
-  decisionLoadScore: number; // 0..1
-  energyRequiredScore: number; // 0..1
-  ifThenPlan: string;
-  activationAid: "timer" | "none";
-  starterTaskEligible: boolean;
-  maintenanceEligible: boolean;
-};
-
-export type ActivationBundle = {
-  starterTaskId: string;
-  timerSeconds: number;
-  startCue: string;
-};
-
-export type SessionState = {
-  sessionId: string;
-  tasks: Array<TaskCandidate & { isDone: boolean; startedAt?: string; doneAt?: string }>;
-  activeTaskId?: string;
-  completedCount: number;
-  totalCount: number;
-  overwhelmRisk: number; // 0..1
-  procrastinationRisk: number; // 0..1
-  stallCount: number;
-  activationBundle: ActivationBundle;
+  impactHint: 1 | 2 | 3 | 4 | 5;
+  decisionHeavy: boolean;
 };
 ```
 
-### 4.3 MVP pipeline
+LLM-generated fields:
+- `title`: user-facing task title.
+- `instruction`: one concrete action.
+- `taskKind`: rough task type.
+- `zoneId`: where the task happens.
+- `estimatedSeconds`: rough duration estimate.
+- `impactHint`: how noticeable the result will be right away.
+- `decisionHeavy`: whether the task involves lots of keep/discard/sort choices.
 
-1. **Scene analysis**
-- Use a multimodal model to return zones, object classes, clutter density, and candidate tasks in one structured response.
-- Normalize object labels into a small canonical taxonomy for stable downstream logic.
+### 4.4 What the backend derives
 
-2. **Candidate generation**
-- Create `12-20` candidates internally, then prune to the final `5-7` recommended tasks.
-- Candidate templates should prioritize:
-  - trash removal,
-  - dish/laundry gathering,
-  - pile grouping,
-  - surface reset,
-  - wipe/vacuum only after declutter.
+The backend should normalize and derive the actual ranking fields.
 
-3. **Behavioral scoring**
-- Compute:
-  - `expectancy = 1 - complexityScore`
-  - `value = 0.5 * visibleImpactScore + 0.3 * hygieneOrUtilityScore + 0.2 * accessibilityScore`
-  - `delay = estimatedSeconds / 180`
-  - `friction = aversivenessScore + decisionLoadScore`
-- Motivation score:
+```ts
+export type TaskCandidate = TaskDraft & {
+  phase: 1 | 2 | 3 | 4 | 5 | 6;
+  impactScore: number; // 0..1, derived from impactHint
+  effortScore: number; // 0..1, derived from duration + decisionHeavy
+  starterFitScore: number; // internal only
+  orderScore: number; // internal only
+};
+```
+
+Backend-derived fields:
+- `phase`: mapped from `taskKind`.
+- `impactScore`: normalized from `impactHint`.
+- `effortScore`: combined "how hard this feels" score.
+- `starterFitScore`: used only to pick the first recommended task.
+- `orderScore`: used only to sort tasks within a valid phase.
+
+### 4.5 Scoring model
+
+The old scoring model had too many overlapping concepts. The MVP should use only this:
 
 ```txt
-motivation_score = (expectancy * value) / (1 + delay + friction)
+impactScore = (impactHint - 1) / 4
+
+effortScore = clamp(
+  ((estimatedSeconds - 30) / 150) + (decisionHeavy ? 0.25 : 0),
+  0,
+  1
+)
+
+starterFitScore = impactScore - (0.7 * effortScore)
+
+orderScore = impactScore - (0.5 * effortScore)
 ```
 
-- Starter score:
+How the scores are used:
+- `starterFitScore`
+  - used once, to choose the first recommended task from the earliest valid phase.
+- `orderScore`
+  - used after phase gating, to sort tasks within the same phase.
 
-```txt
-starter_score = visibleImpactScore + accessibilityScore - decisionLoadScore - aversivenessScore
-```
+What the scores are not:
+- not shown to the user,
+- not persisted as product-facing data,
+- not used to override hard sequencing rules.
 
-4. **Dependency and order constraints**
-- Hard order:
-  1) trash/disposables,
-  2) gather obvious misplaced items,
-  3) group remaining clutter,
-  4) reset surfaces,
-  5) wipe/vacuum,
-  6) finishing placement,
-  7) maintenance anchor.
-- Do not surface wipe/vacuum tasks before major loose clutter is reduced.
+### 4.6 Ordering rules
 
-5. **Queue shaping**
-- Put only three tasks in the primary queue:
-  - `Now`: recommended starter or active task
-  - `Next`: likely follow-up
-  - `Later`: one additional option
-- Keep all other tasks collapsed.
+Ordering should be mostly rule-based, with scoring only used inside those rules.
 
-6. **Activation formatting**
-- Every visible task must have:
-  - concise title,
-  - one concrete instruction,
-  - time estimate,
-  - if-then cue.
-- The starter card should default to timer-based activation in MVP:
-  - example: `Start a 60-second timer and clear visible trash`.
+Hard cleanup order:
+1. `trash`
+2. `gather`
+3. `group`
+4. `reset`
+5. `clean`
+6. `finish`
 
-7. **Runtime adaptation**
-- If `time_since_last_completion > 180s`, generate a rescue task:
-  - `estimatedSeconds <= 60`
-  - high visibility
-  - low decision load
-- If the user skips or abandons two tasks, narrow the queue to a single recommended task.
-- If the user completes the first two tasks quickly, unlock a denser plan or longer tasks.
+Rules:
+- A later phase never jumps ahead of an earlier phase.
+- The first recommended task should come from the earliest phase that has a strong starter fit.
+- If no task in phase 1 has a good starter fit, choose the least-effort task from that phase rather than jumping forward.
 
-8. **Persistence and resume**
-- Persist after every task toggle and queue change.
-- Resume should show:
-  - completed count,
-  - the next recommended task,
-  - a one-tap restart cue.
+### 4.7 Frontend contract
 
-### 4.4 MVP anti-overwhelm rules
-- One primary CTA per screen.
-- Do not default to showing the full checklist.
-- Avoid ambiguous verbs like `organize` or `tidy up`; use object + action + location.
-- Avoid recommending organizers before item volume is reduced.
-- No punitive streak or guilt framing.
+The frontend should stay calm and simple:
+- show one recommended next task by default,
+- allow the full list to expand if the user wants it,
+- show checklist progress,
+- no visible timer,
+- no rescue-task interruptions,
+- no urgency copy.
 
-### 4.5 MVP reward and feedback rules
-- Reward latency target: `<100ms` from tap to haptic.
-- Milestones at `25/50/75/100%`.
-- Progress should emphasize visible gains, not just counts.
-- The starter task should create legitimate endowed progress as soon as the session begins.
-
-### 4.6 MVP acceptance criteria
-- 90%+ sessions include a starter task `<= 90` seconds.
-- 100% sessions enforce declutter-before-deep-clean ordering.
+### 4.8 Acceptance criteria
+- 90%+ sessions include a first recommended task `<= 90` seconds.
+- 100% sessions enforce cleanup phase order.
 - 95%+ task toggles trigger haptic response within latency target.
-- 80%+ sessions show only `Now / Next / Later` by default.
-- Session resume restores exact checklist and recommended-next-task state.
+- 80%+ sessions surface a single recommended next task by default.
+- Session resume restores checklist state and recommended-next-task state.
 
 ## 5) Future-State Engine
 
-The future state should move from static session planning to adaptive cleaning support.
+The future state should stay conceptually simple while becoming more adaptive.
 
 ### 5.1 Future-state capabilities
-- Personalized task duration based on past completion speed and abandonment patterns.
+- Personalized effort weighting based on user completion history.
 - Mode selection:
   - `quick win`
   - `full reset`
   - `maintenance`
-- Adaptive audio support:
-  - open user's preferred music or podcast app,
-  - suggest different audio types based on task aversiveness and user history.
-- Smart maintenance plans after a cleanup session:
-  - 2-minute daily reset,
-  - room-specific upkeep prompts,
-  - relapse recovery flows.
+- Optional audio launch into a preferred music or podcast app.
+- Lightweight maintenance plans after a cleanup session.
 - Body-doubling and social accountability features, if later validated.
 - Delayed organizer/tool recommendations only after declutter threshold is reached.
 
 ### 5.2 Future-state engine upgrades
-- Replace fixed scoring weights with learned personalization weights.
-- Predict stall risk before it happens and pre-empt with lower-friction task suggestions.
-- Dynamically re-chunk tasks when the engine detects hidden clutter layers or rising overwhelm.
-- Use session history to choose whether the user benefits more from:
-  - visible-win tasks,
-  - time-boxed sprints,
-  - maintenance-first resets,
-  - audio-assisted activation.
+- Learn better effort weighting from real completion data.
+- Adjust impact estimates based on room type and past user behavior.
+- Offer different plan density for users who prefer:
+  - very small wins,
+  - fewer bigger tasks,
+  - maintenance-first flows.
 
 ## 6) Instrumentation and Experiment Plan
 
 Core metrics:
-- `time_to_first_checkoff_seconds` (primary anti-procrastination KPI)
-- `starter_task_completion_rate`
+- `time_to_first_checkoff_seconds`
+- `recommended_task_completion_rate`
 - `task_completion_rate`
 - `session_completion_rate`
-- `stall_events_per_session`
-- `rescue_task_accept_rate`
 - `return_and_resume_rate`
 - `maintenance_task_accept_rate`
 
 Initial experiments:
 1. `5` tasks vs `7` tasks vs `10` tasks.
-2. `Now / Next / Later` vs full checklist default.
-3. Fixed 2-minute tasks vs adaptive duration after first completion.
-4. No-audio prompt vs `music` prompt vs `podcast` prompt.
-5. Rescue task vs split-task fallback.
+2. One recommended task vs expanded full checklist default.
+3. Fixed effort weighting vs personalized effort weighting after enough history exists.
+4. No-audio option vs optional audio launch.
 
 ## 7) Important Caveats
 - Several findings above come from adjacent domains (education, health behavior, consumer behavior). The translation to home-cleaning UX is a reasoned product inference, not guaranteed 1:1 transfer.
