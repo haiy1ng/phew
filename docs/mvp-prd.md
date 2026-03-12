@@ -1,289 +1,274 @@
-# Phew MVP PRD
+# Phew MVP PRD (iOS Native)
 
 - Product: **Phew**
-- Version: **MVP v0.1**
+- Platform: **iOS native (SwiftUI)**
+- Version: **MVP v0.2**
 - Date: **March 12, 2026**
-- Status: **Draft for build kickoff**
+- Status: **Draft for implementation**
 
 ## 1) Product Summary
-Phew helps users clean cluttered spaces without overwhelm. A user uploads a photo of a messy area (for example, a work desk), sees an AI-generated tidy target image, and receives small, concrete cleanup tasks they can check off in sequence. The core loop combines motivation (before/after vision) with manageable action (micro-tasks + gamified progress).
+Phew helps users clean cluttered spaces without overwhelm. The user captures or uploads a photo of a messy area, sees an AI-generated "clean and organized" preview of that same space, and gets a short sequence of tiny tasks to check off. The experience is designed to reduce paralysis and increase momentum through visual motivation plus micro-wins.
 
-## 2) Problem Statement
-People often delay cleaning because:
-- The mess feels emotionally heavy and cognitively expensive.
-- They do not know where to start.
-- They struggle to sustain momentum once they begin.
+## 2) Target Audience
+### Individuals with ADHD / Executive Dysfunction
+- Users who struggle to chunk large tasks into actionable steps.
+- Need: very small, explicit actions and immediate progress cues.
 
-Current generic to-do apps do not convert visual clutter into actionable cleanup steps tailored to a specific space.
+### Busy Professionals
+- Users with limited time who need a quick, meaningful win.
+- Need: short task bursts that can fit into brief breaks.
 
-## 3) Target Users
-### Primary persona: Overwhelmed knowledge worker
-- Environment: Home office or desk-heavy work setup.
-- Pain points: Visual clutter hurts focus; procrastinates cleanup.
-- Need: Fast direction with low mental load.
+### The Overwhelmed
+- Anyone who feels paralyzed by domestic clutter.
+- Need: calm guidance, clear starting point, and low-friction completion.
 
-### Secondary persona: Student in shared living space
-- Environment: Small bedroom/desk with mixed personal and school items.
-- Pain points: Limited storage and frequent buildup.
-- Need: Short sessions and immediate wins.
+## 3) Problem Statement
+People avoid cleaning because clutter feels emotionally and cognitively heavy. They often do not know where to begin, and broad to-do lists make the task feel even bigger. Most productivity apps do not convert a specific messy scene into ordered, realistic, low-effort actions.
 
 ## 4) Jobs To Be Done
-- When my room or desk gets messy and I feel stuck, help me start with tiny steps so I can clean without stress.
-- Show me what “done enough” looks like so I stay motivated.
+- When I feel stuck looking at a messy area, help me start instantly with tiny actions.
+- Show me what "better" looks like so I stay motivated.
+- Let me pause and return without losing momentum.
 
-## 5) MVP Goals
-1. Convert one uploaded mess photo into:
-   - A clean target visual.
-   - A prioritized micro-task plan (5-8 tasks, 2-15 minutes each).
-2. Support completion tracking in one cleanup session.
-3. Increase user confidence and momentum through visible progress and lightweight rewards.
+## 5) MVP Features & Requirements
+| Feature | Description | Priority |
+|---|---|---|
+| Vision Capture | User takes/uploads a photo of a messy area (desk, sink, corner). | P0 |
+| AI "After" Preview | Generates a realistic image of the same space, but clean and organized. | P0 |
+| Micro-Task Engine | AI analyzes the "Before" photo and generates 5-10 tiny, ~2-minute tasks. | P0 |
+| Interactive Checklist | Simple checklist UI to mark tasks done, with haptic feedback for "dopamine hits." | P0 |
+| Progress Persistence | Saves session so users can step away and return without losing progress. | P1 |
 
-## 6) Non-Goals (MVP)
-- Multi-room project planning.
-- Social/community features.
-- AR overlays, live camera guidance, or object detection precision.
-- Native mobile apps.
-- Advanced habit analytics or long-term coaching.
+## 6) MVP Goals
+1. Convert one messy-space image into an actionable cleanup session in under 30 seconds perceived setup time.
+2. Drive early momentum with 5-10 tiny tasks and fast check-off interactions.
+3. Improve completion confidence through side-by-side before/after motivation.
 
-## 7) Success Metrics
-### Activation
-- % of new users who upload a photo and generate a plan in first session.
-- MVP target: **>= 70%**.
+## 7) Non-Goals (MVP)
+- Social features or accountability groups.
+- Multi-room project planning across an entire home.
+- Subscription/paywall optimization.
+- Advanced personalization models.
+- Android release.
 
-### Core engagement
-- % of sessions with at least one task checked.
-- MVP target: **>= 65%**.
+## 8) User Flow (Primary)
+1. User opens app.
+2. User takes photo or selects image from Photos.
+3. User taps "Generate Plan."
+4. App returns:
+   - AI "after" preview of same scene.
+   - 5-10 ordered micro-tasks.
+5. User starts cleaning and checks tasks one by one.
+6. Haptic feedback, progress bar, and completion count update instantly.
+7. User leaves app and returns later; session state is restored.
+8. User finishes and gets completion state.
 
-### Completion
-- % of generated plans with >= 60% tasks completed in-session.
-- MVP target: **>= 40%**.
-
-### Motivation proxy
-- % of users who report “less overwhelmed” in optional 1-click post-session prompt.
-- MVP target: **>= 60% positive**.
-
-## 8) User Journey (Primary Flow)
-1. User lands on home screen.
-2. User uploads a photo of messy space.
-3. User selects space type (desk, bedroom, kitchen, etc.).
-4. User taps “Generate tidy version + task cards”.
-5. App shows:
-   - Before image.
-   - AI clean target image.
-   - Scene summary + encouragement.
-   - Ordered task cards with estimate + XP reward.
-6. User starts cleanup and checks tasks as completed.
-7. Progress bar, completion count, and XP update live.
-8. User reaches completion milestone and sees a concise success state.
-
-## 9) Functional Requirements
-### FR-1 Upload and input
-- User can upload one image file (`jpg`, `jpeg`, `png`, `webp`) up to 10 MB.
-- User can pick a space type.
-- Validation errors are clear and recoverable.
+## 9) Functional Requirements (Product)
+### FR-1 Vision Capture (P0)
+- Support camera capture and photo library import.
+- Accept `jpg`, `jpeg`, `png`, `heic`.
+- Show clear error for unsupported/failed media.
 
 Acceptance criteria:
-- Invalid file type or missing file blocks generation with clear message.
-- Valid upload proceeds in <= 1 click after selection.
+- User can provide image in <= 2 taps from home screen.
 
-### FR-2 AI cleanup plan generation
-- Backend accepts base64 image and context.
-- LLM returns structured JSON containing:
-  - `sceneSummary`
-  - `encouragement`
-  - `tasks[]` (title, instructions, estimatedMinutes, rewardPoints)
-- Tasks are normalized and capped (5-8 max for MVP UI).
+### FR-2 AI "After" Preview (P0)
+- Generate a realistic, cleaner version of the same room area.
+- Preserve core structure/layout and camera viewpoint as much as possible.
 
 Acceptance criteria:
-- Every response surfaces at least 5 tasks.
-- Every task has actionable instruction and duration estimate.
+- Preview feels plausibly "same space, cleaned" in most cases.
 
-### FR-3 AI tidy vision image
-- Backend requests a clean target image based on analyzed scene.
-- UI renders generated target image next to uploaded image.
-- If image generation fails, app gracefully falls back and still provides tasks.
-
-Acceptance criteria:
-- User always receives a usable task plan, even on partial AI failure.
-
-### FR-4 Task execution and tracking
-- Tasks display as checkable cards.
-- Checking/unchecking updates:
-  - Completed count
-  - Progress %
-  - XP earned
+### FR-3 Micro-Task Engine (P0)
+- Generate 5-10 tiny tasks.
+- Default task size should be short (target around 2 minutes each).
+- Steps must be practical and non-overlapping.
 
 Acceptance criteria:
-- State updates instantly with no page reload.
+- Task list is understandable at a glance and immediately actionable.
 
-### FR-5 Motivation layer
-- Display lightweight progress reinforcement:
-  - Progress bar
-  - XP chip
-  - Encouragement text
-- Keep language non-judgmental and action-oriented.
+### FR-4 Interactive Checklist + Haptics (P0)
+- User can check/uncheck tasks.
+- Trigger light haptic feedback on completion events.
+- Show progress percentage and completed count.
 
 Acceptance criteria:
-- User can infer what to do next without additional instructions.
+- Toggle response is instant; no blocking network dependency.
 
-## 10) UX Principles
-- **Low cognitive load first**: one clear CTA, no dense control surfaces.
-- **Momentum over perfection**: emphasize partial progress.
-- **Immediate visual feedback**: before/after appears in same view.
-- **Manageable chunks**: short tasks and visible time estimates.
+### FR-5 Progress Persistence (P1)
+- Persist current session (before image, after image URL/ref, task states, progress).
+- Restore in-progress session when app relaunches.
 
-## 11) MVP Scope In / Out
-### In scope
-- Single-page web app.
-- One-photo analysis per session.
-- AI plan + AI tidy image generation.
-- Checklist + progress + XP.
-- Basic fallback behavior when API unavailable.
+Acceptance criteria:
+- User can leave app for hours and return without losing checklist state.
 
-### Out of scope
-- Authentication/accounts.
-- History sync across devices.
-- Billing/paywall.
-- Push notifications.
-- Team/shared cleanup sessions.
+## 10) Functional Requirements (Technical)
+### AI Image Generation
+- Input: user-generated photo.
+- Prompting/model behavior: must use **in-painting** or **image-to-image** style generation to keep structural integrity of the room while removing clutter objects.
+- Output: realistic cleaned preview that preserves room geometry/camera perspective where possible.
 
-## 12) System Design (MVP)
-### Frontend
-- Next.js App Router UI.
-- Local state for session data and checklist progress.
-- Responsive desktop/mobile layout.
+Technical acceptance criteria:
+- Model call includes explicit preservation constraints (same room layout, same viewpoint, realistic cleaned state).
+- Fallback behavior exists when generation fails (user still receives task plan).
+
+### AI Task Logic
+- Input: vision reasoning over image content to identify objects/surfaces (for example dishes, laundry, trash, paper piles).
+- Output: logically sequenced steps.
+- Sequencing rule: do not suggest deep cleaning tasks (for example vacuuming/wiping) before decluttering tasks (for example picking up clothes/trash).
+
+Technical acceptance criteria:
+- Server/app logic enforces ordering heuristics if model output is out of order.
+- Each task contains concise title + one concrete action instruction.
+
+## 11) iOS MVP Architecture
+### Client
+- SwiftUI app (`NavigationStack` + state-driven screens).
+- `PhotosPicker` + camera capture flow.
+- Checklist interaction with `UIImpactFeedbackGenerator` or equivalent SwiftUI haptics.
+- Session state model in app layer.
+
+### Persistence
+- P1: local persistence via SwiftData (preferred) or Core Data.
+- Persist:
+  - Session id
+  - Before image local reference
+  - After image URL/local cache reference
+  - Task list + completion state
+  - Timestamp metadata
 
 ### Backend
-- Next.js route handler: `POST /api/cleanup-plan`.
-- Calls:
-  - OpenAI Responses API for scene understanding + micro-task JSON.
-  - OpenAI Images API for tidy target generation.
-- Normalizes model output and returns stable response schema.
+- Lightweight API service:
+  - Vision+reasoning endpoint for task generation.
+  - Image transformation endpoint for after-preview.
+- Return normalized JSON response for deterministic UI rendering.
 
-### Fallback strategy
-- If no `OPENAI_API_KEY` or AI request failure:
-  - Return deterministic mock cleanup plan.
-  - Reuse uploaded image as placeholder target.
-  - Continue full task-checking experience.
+## 12) Data Model (MVP)
+Entity: `CleanupSession`
+- `id`
+- `createdAt`
+- `updatedAt`
+- `beforeImageRef`
+- `afterImageRef`
+- `status` (`in_progress`, `completed`)
+- `progressPercent`
 
-## 13) API Contract (Current)
+Entity: `CleanupTask`
+- `id`
+- `sessionId`
+- `orderIndex`
+- `title`
+- `instruction`
+- `estimatedSeconds`
+- `isDone`
+
+## 13) API Contract (Draft)
 ### Request
-`POST /api/cleanup-plan`
+`POST /v1/cleanup/session`
 
 ```json
 {
-  "imageDataUrl": "data:image/png;base64,...",
-  "focus": "desk"
+  "image": "<binary-or-base64>",
+  "spaceType": "desk"
 }
 ```
 
 ### Response
 ```json
 {
-  "sceneSummary": "...",
-  "encouragement": "...",
-  "cleanImageUrl": "https://... or data:image/...",
+  "sessionId": "sess_123",
+  "sceneSummary": "Desk with mixed paper clutter and dishes.",
+  "afterImageUrl": "https://...",
   "tasks": [
     {
-      "id": "1",
-      "title": "Clear visible trash",
-      "instructions": "...",
-      "estimatedMinutes": 4,
-      "rewardPoints": 10
+      "id": "task_1",
+      "orderIndex": 1,
+      "title": "Remove obvious trash",
+      "instruction": "Put all wrappers and disposable items into one trash bag.",
+      "estimatedSeconds": 120
     }
-  ],
-  "isMock": false
+  ]
 }
 ```
 
-## 14) Data Model (Session-level)
-For MVP, data is ephemeral (in-memory UI state).
+## 14) UX Principles
+- **Start instantly**: minimal input burden on first screen.
+- **Reduce overwhelm**: short tasks and calm language.
+- **Reward momentum**: immediate haptic + visual progress feedback.
+- **Preserve continuity**: in-progress sessions resume seamlessly.
 
-Entity: `CleanupSession`
-- `sessionId` (future)
-- `uploadedImageRef`
-- `cleanImageRef`
-- `sceneSummary`
-- `encouragement`
-- `tasks[]`
-- `startedAt`, `completedAt` (future)
+## 15) Success Metrics
+### Activation
+- % of first-time users who complete photo capture/upload and generate plan.
+- Target: >= 70%.
 
-Entity: `CleanupTask`
-- `id`
-- `title`
-- `instructions`
-- `estimatedMinutes`
-- `rewardPoints`
-- `done` (client state)
+### Engagement
+- % sessions with at least one checked task.
+- Target: >= 65%.
 
-## 15) Analytics Events (MVP)
-- `upload_selected`
-- `plan_generation_started`
-- `plan_generation_succeeded`
-- `plan_generation_failed`
-- `task_checked`
-- `task_unchecked`
-- `session_progress_updated`
-- `session_completed` (100% tasks)
+### Completion
+- % sessions reaching >= 60% task completion.
+- Target: >= 40%.
 
-## 16) Trust, Safety, and Privacy
-- Do not store user photos in MVP by default.
-- Process images only for immediate inference and generation.
-- Add clear note that outputs are AI-generated and may not perfectly reflect physical constraints.
-- Avoid judgmental or shaming language in model prompts and UI copy.
+### Return-without-drop
+- % resumed sessions where user completes at least one additional task after returning.
+- Target: >= 50%.
 
-## 17) Non-Functional Requirements
-- End-to-end generation target: <= 12 seconds median on broadband.
-- App should remain usable when image generation fails.
-- Mobile-first responsive behavior for >= 360px width.
+## 16) Non-Functional Requirements
+- Median generation time (plan + after image): <= 15s on typical 4G/Wi-Fi.
+- Smooth checklist interaction at 60fps equivalent UI responsiveness.
+- Offline-safe persistence for in-progress checklist state.
 - Accessibility baseline:
-  - Keyboard-operable checklist.
-  - Semantic labels for file input and checkboxes.
-  - Sufficient text contrast.
+  - Dynamic Type support.
+  - VoiceOver labels for actionable controls.
+  - Clear contrast for primary actions.
 
-## 18) QA and Test Plan
-- Unit tests (next phase): output normalization and JSON parsing helpers.
-- Integration tests (next phase): `/api/cleanup-plan` success/fallback/error paths.
-- Manual smoke:
-  - Upload valid image.
-  - Upload invalid file.
-  - Generate plan with and without API key.
-  - Check/uncheck all tasks.
-  - Verify mobile layout and progress updates.
+## 17) Privacy and Safety
+- Minimize retention of user photos; default to transient processing unless user opts in later.
+- Do not use shaming or moralizing language in prompts or UI.
+- Clearly label generated preview as AI output.
 
-## 19) Rollout Plan
-### Phase 1 (Week 1)
-- Scaffold app and endpoint.
-- Mock fallback + UI journey complete.
+## 18) QA Plan (MVP)
+- Unit tests:
+  - Task ordering enforcement.
+  - Progress calculation.
+  - Persistence encode/decode.
+- Integration tests:
+  - Successful generation path.
+  - Image generation failure fallback.
+  - Session restore path.
+- Manual test matrix:
+  - iPhone small/large form factors.
+  - Interruptions (background/foreground).
+  - Slow network and timeout handling.
 
-### Phase 2 (Week 2)
-- Hardening for production:
-  - Better retries/timeouts.
-  - Analytics wiring.
-  - Error telemetry.
+## 19) Milestones
+### Milestone 1 (Week 1)
+- SwiftUI app shell + vision capture + static checklist prototype.
 
-### Phase 3 (Week 3)
-- MVP beta with user feedback loop.
-- Tune task prompt quality and reward balancing.
+### Milestone 2 (Week 2)
+- AI after-preview + micro-task engine integration.
+
+### Milestone 3 (Week 3)
+- Haptics tuning + persistence + beta hardening.
 
 ## 20) Risks and Mitigations
-- Risk: AI output inconsistency.
-  - Mitigation: strict output shape, server-side normalization, fallback tasks.
+- Risk: AI output is unrealistic or generic.
+  - Mitigation: stronger prompt constraints + fallback UX.
 
-- Risk: Slow generation causing drop-off.
-  - Mitigation: loading state, staged results, timeout handling.
+- Risk: Task order quality degrades user trust.
+  - Mitigation: enforce declutter-before-deep-clean ordering rules.
 
-- Risk: Motivational copy perceived as generic.
-  - Mitigation: contextual encouragement tied to scene summary and progress.
+- Risk: Users churn if generation feels slow.
+  - Mitigation: progressive loading states and fast local checklist interactions.
 
 ## 21) Post-MVP Backlog
-- User accounts and session history.
-- Re-clean reminders and recurring maintenance plans.
-- Multi-angle room cleanup plans.
-- Voice-guided cleanup mode.
-- Personalized reward systems and streaks.
+- Multi-session streaks and adaptive rewards.
+- Shared household mode.
+- Personalized task difficulty based on user completion behavior.
+- Siri Shortcuts support for quick "start cleanup" flow.
 
 ## 22) Open Questions
-- Should we prioritize deterministic image-edit workflow over generated “inspired tidy” image for fidelity?
-- What is the right default number of tasks for highest completion (5 vs 7)?
-- Should XP be purely effort-based or adapt to user completion history?
+- Should MVP keep session history list or only restore last active session?
+- Which model/provider gives best structure-preserving image transformation quality for cost?
+- Should default tasks always be fixed at 7, or dynamic based on clutter density?
