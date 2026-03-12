@@ -121,6 +121,9 @@ Technical acceptance criteria:
 - Server/app logic enforces ordering heuristics if model output is out of order.
 - Each task contains concise title + one concrete action instruction.
 
+Implementation detail reference:
+- See the evidence-based engine design in [docs/micro-task-engine-framework.md](/Users/haiyingdong/Desktop/projects/phew/docs/micro-task-engine-framework.md).
+
 ## 11) iOS MVP Architecture
 ### Client
 - SwiftUI app (`NavigationStack` + state-driven screens).
