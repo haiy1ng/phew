@@ -2,7 +2,7 @@
 
 - Product: **Phew**
 - Platform: **iOS native (SwiftUI)**
-- Version: **MVP v0.2**
+- Version: **MVP v0.3**
 - Date: **March 12, 2026**
 - Status: **Draft for implementation**
 
@@ -30,22 +30,36 @@ People avoid cleaning because clutter feels emotionally and cognitively heavy. T
 - Show me what "better" looks like so I stay motivated.
 - Let me pause and return without losing momentum.
 
-## 5) MVP Features & Requirements
-| Feature | Description | Priority |
-|---|---|---|
-| Vision Capture | User takes/uploads a photo of a messy area (desk, sink, corner). | P0 |
-| AI "After" Preview | Generates a realistic image of the same space, but clean and organized. | P0 |
-| Micro-Task Engine | AI analyzes the "Before" photo and generates 5-10 tiny, ~2-minute tasks. | P0 |
-| Interactive Checklist | Simple checklist UI to mark tasks done, with haptic feedback for "dopamine hits." | P0 |
-| Progress Persistence | Saves session so users can step away and return without losing progress. | P1 |
+## 5) Feature Priorities
+Priorities below are informed by the research synthesis in [docs/xiaohongshu-reddit-mess-cleaning-research.md](/Users/haiyingdong/Desktop/projects/phew/docs/xiaohongshu-reddit-mess-cleaning-research.md).
+
+| Feature | Description | Priority | Scope |
+|---|---|---|---|
+| Vision Capture | User takes/uploads a photo of a messy area (desk, sink, corner). | P0 | In MVP |
+| AI "After" Preview | Generates a realistic image of the same space, but clean and organized. | P0 | In MVP |
+| Micro-Task Engine | AI analyzes the "Before" photo and generates 5-7 tiny default tasks, expandable up to 10 for dense scenes. | P0 | In MVP |
+| First Visible Win Sequencing | Engine selects a very short, visually meaningful first task to reduce paralysis. | P0 | In MVP |
+| Recommended Next Step UI | Default task surface shows `Now / Next / Later` instead of the full list. | P0 | In MVP |
+| Interactive Checklist + Haptics | Simple checklist UI to mark tasks done, with haptic feedback for fast reinforcement. | P0 | In MVP |
+| Progress Persistence | Saves session so users can step away and return without losing progress. | P1 | In MVP |
+| Rescue Task / Split Task | If the user stalls, offer a smaller fallback task or split the current task into easier pieces. | P1 | Stretch MVP |
+| Focus Sprint Timer | Optional 2-5 minute timer attached to current task to reduce start friction. | P1 | Stretch MVP |
+| Post-Session Maintenance Nudge | After cleanup, suggest one tiny upkeep action to reduce relapse. | P1 | Stretch MVP |
+| Audio Companion Launch | Let user start cleaning with music or podcasts to reduce aversiveness. | P2 | Out of MVP |
+| Maintenance Mode | Separate mode for daily/weekly reset sessions after the initial cleanup. | P2 | Out of MVP |
+| Session History and Gentle Streaks | Lightweight session history and non-punitive repeat behavior tracking. | P2 | Out of MVP |
+| Body-Doubling / Social Accountability | Optional shared cleanup or parallel focus support. | P3 | Out of MVP |
+| Organizer / Tool Recommendations | Suggest storage tools only after clutter volume has been reduced. | P3 | Out of MVP |
 
 ## 6) MVP Goals
 1. Convert one messy-space image into an actionable cleanup session in under 30 seconds perceived setup time.
-2. Drive early momentum with 5-10 tiny tasks and fast check-off interactions.
+2. Drive early momentum with 5-7 tiny default tasks and fast check-off interactions.
 3. Improve completion confidence through side-by-side before/after motivation.
 
 ## 7) Non-Goals (MVP)
+- Deep music or podcast integrations.
 - Social features or accountability groups.
+- Organizer or product recommendations during the initial cleanup flow.
 - Multi-room project planning across an entire home.
 - Subscription/paywall optimization.
 - Advanced personalization models.
@@ -57,11 +71,12 @@ People avoid cleaning because clutter feels emotionally and cognitively heavy. T
 3. User taps "Generate Plan."
 4. App returns:
    - AI "after" preview of same scene.
-   - 5-10 ordered micro-tasks.
-5. User starts cleaning and checks tasks one by one.
-6. Haptic feedback, progress bar, and completion count update instantly.
+   - 5-7 ordered micro-tasks by default.
+   - one recommended first-visible-win starter task.
+5. User starts cleaning from the recommended starter task and checks tasks one by one.
+6. Haptic feedback, progress bar, and completion count update instantly; the app may attach an optional timer and later offer a rescue task if the user stalls.
 7. User leaves app and returns later; session state is restored.
-8. User finishes and gets completion state.
+8. User finishes and gets completion state, with an optional maintenance handoff.
 
 ## 9) Functional Requirements (Product)
 ### FR-1 Vision Capture (P0)
@@ -80,12 +95,15 @@ Acceptance criteria:
 - Preview feels plausibly "same space, cleaned" in most cases.
 
 ### FR-3 Micro-Task Engine (P0)
-- Generate 5-10 tiny tasks.
+- Generate 5-7 tiny tasks by default, with expansion up to 10 only for dense scenes.
 - Default task size should be short (target around 2 minutes each).
 - Steps must be practical and non-overlapping.
+- First task should be short (`<= 90` seconds), concrete, and visually impactful.
+- Default UI queue should reduce choice overload by showing one recommended task plus at most two upcoming tasks.
 
 Acceptance criteria:
 - Task list is understandable at a glance and immediately actionable.
+- First task feels meaningfully easier to start than the rest of the plan.
 
 ### FR-4 Interactive Checklist + Haptics (P0)
 - User can check/uncheck tasks.
@@ -101,6 +119,14 @@ Acceptance criteria:
 
 Acceptance criteria:
 - User can leave app for hours and return without losing checklist state.
+
+### FR-6 Momentum Recovery (P1)
+- Detect likely stall during an active session.
+- Offer either a rescue micro-task or a split-task version of the current task.
+- Keep recovery language supportive and non-judgmental.
+
+Acceptance criteria:
+- A stalled session can recover without the user needing to regenerate the full plan.
 
 ## 10) Functional Requirements (Technical)
 ### AI Image Generation
@@ -167,7 +193,7 @@ Entity: `CleanupTask`
 
 ## 13) API Contract (Draft)
 ### Request
-`POST /v1/cleanup/session`
+`POST /v1/cleanup/sessions`
 
 ```json
 {
@@ -207,7 +233,7 @@ Entity: `CleanupTask`
    - `scene` structure (zones, object classes, clutter scores)
    - `taskCandidates` list
 3. Normalize candidates and apply deterministic rules:
-   - 5-10 tasks total
+   - 5-7 tasks by default, expandable up to 10 for dense scenes
    - first task <= 90 seconds
    - declutter phases before deep-clean phases
    - one concrete action per task
@@ -293,9 +319,12 @@ Entity: `CleanupTask`
   - Mitigation: progressive loading states and fast local checklist interactions.
 
 ## 21) Post-MVP Backlog
-- Multi-session streaks and adaptive rewards.
-- Shared household mode.
+- Audio companion integrations for music/podcast-assisted start rituals.
+- Maintenance mode with recurring reset flows.
+- Multi-session history and non-punitive streak mechanics.
+- Shared household or body-doubling modes.
 - Personalized task difficulty based on user completion behavior.
+- Organizer/tool recommendations after declutter threshold is reached.
 - Siri Shortcuts support for quick "start cleanup" flow.
 
 ## 22) Open Questions
