@@ -194,6 +194,33 @@ Entity: `CleanupTask`
 }
 ```
 
+### Backend Endpoints (MVP)
+- `POST /v1/cleanup/sessions`: create session with uploaded image, return `sessionId` and processing status.
+- `GET /v1/cleanup/sessions/{id}`: fetch processing state or full generated session payload.
+- `PATCH /v1/cleanup/sessions/{id}/tasks/{taskId}`: update `isDone` and persist progress.
+- `POST /v1/cleanup/sessions/{id}/rescue-task`: generate one smaller fallback task when user stalls.
+- `GET /v1/cleanup/sessions/active`: restore latest in-progress session for app relaunch.
+
+### Backend Processing Flow (MVP)
+1. Validate image and create session record.
+2. Call multimodal model with strict JSON schema that returns both:
+   - `scene` structure (zones, object classes, clutter scores)
+   - `taskCandidates` list
+3. Normalize candidates and apply deterministic rules:
+   - 5-10 tasks total
+   - first task <= 90 seconds
+   - declutter phases before deep-clean phases
+   - one concrete action per task
+4. Rank and finalize task objects for UI.
+5. Generate AI clean preview using image-to-image/in-painting constraints (preserve room layout and camera viewpoint).
+6. Persist and return final session payload.
+
+### Runtime Rules
+- If after-image generation fails, still return task session with partial-success state.
+- Persist progress after every task toggle.
+- Trigger rescue-task suggestion when no completion event is recorded for >= 180 seconds.
+- Log core metrics: `time_to_first_checkoff`, `session_completion_rate`, `stall_events`, `resume_rate`.
+
 ## 14) UX Principles
 - **Start instantly**: minimal input burden on first screen.
 - **Reduce overwhelm**: short tasks and calm language.
